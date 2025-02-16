@@ -211,31 +211,85 @@ export function focusTrap(
 }
 
 /**
- * Debounces a function
+ * Runs a function only if there are no new calls during the delay
  */
-// export function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): (...args: Parameters<T>) => void {
-//   let timeoutId: ReturnType<typeof setTimeout> | undefined
+export function debounce<T extends (
+  ...args: unknown[]) => unknown>(
+  func: T,
+  delay: number,
+  { leading = false, trailing = true }:
+  { leading?: boolean, trailing?: boolean } = {},
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let lastArgs: Parameters<T> | null = null
 
-//   return function (this: ThisParameterType<T>, ...args: Parameters<T>): void {
-//     if (timeoutId) {
-//       clearTimeout(timeoutId)
-//     }
-//     timeoutId = setTimeout(() => fn.apply(this, args), delay)
-//   }
-// }
+  function debounced(this: ThisParameterType<T>, ...args: Parameters<T>): void {
+    const shouldCallNow = leading && !timer
+    lastArgs = args
+
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = null
+      if (trailing && lastArgs) {
+        func.apply(this, lastArgs)
+      }
+      lastArgs = null
+    }, delay)
+
+    if (shouldCallNow) {
+      func.apply(this, args)
+    }
+  }
+
+  debounced.cancel = () => {
+    if (timer) clearTimeout(timer)
+    timer = null
+    lastArgs = null
+  }
+
+  return debounced
+}
 
 /**
- * Throttles a function
+ * Throttles a function to ensure it only runs once per threshold
  */
-// export function throttle<T extends (...args: unknown[]) => void>(fn: T, delay: number): (...args: Parameters<T>) => void {
-//   let timeout: ReturnType<typeof setTimeout> | null = null
+export function throttle<T extends (
+  ...args: unknown[]) => void>(
+  fn: T,
+  threshold: number,
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let lastRun = 0
+  let timeout: ReturnType<typeof setTimeout> | null = null
 
-//   return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
-//     if (timeout) return
+  const throttledFn = function (this: ThisParameterType<T>, ...args: Parameters<T>) {
+    const now = performance.now()
+    const remaining = threshold - (now - lastRun)
 
-//     timeout = setTimeout(() => {
-//       fn.apply(this, args)
-//       timeout = null
-//     }, delay)
-//   }
-// }
+    if (remaining <= 0) {
+      if (timeout) {
+        clearTimeout(timeout)
+        timeout = null
+      }
+      lastRun = now
+      fn.apply(this, args)
+    }
+    else if (!timeout) {
+      timeout = setTimeout(() => {
+        lastRun = performance.now()
+        timeout = null
+        fn.apply(this, args)
+      }, remaining)
+    }
+  }
+
+  // Cancel any pending trailing execution
+  throttledFn.cancel = () => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = null
+    }
+    lastRun = 0
+  }
+
+  return throttledFn
+}
