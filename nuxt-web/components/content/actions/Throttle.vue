@@ -12,7 +12,7 @@
 </template>
 
 <script lang="ts" setup>
-const threshold = ref(1000)
+const threshold = ref(2000)
 const clicks = ref(0)
 const executions = ref(0)
 const executionLog = ref<string[]>([])

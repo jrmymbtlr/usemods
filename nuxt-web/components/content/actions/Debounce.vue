@@ -2,7 +2,7 @@
   <Example>
     <ExampleInputs>
       <FormInput v-model="delay" label="Delay" type="number" />
-      <Button @click="handleClick">Click me</Button>
+      <Button @click="handleClick" color="secondary">Click me</Button>
     </ExampleInputs>
 
     <ClickLog :executions="executions" :clicks="clicks" :executionLog="executionLog" />
